@@ -23,6 +23,8 @@ To subsequently activate this environment and open Jupyter Notebook enter the fo
 * source activate EnvironmentName
 * jupyter notebook
 
+From Jupyter Notebook navigate to ipynb files on your computer to run scipts.
+
 ## Image requirements
 Single channel, 8-bit, .tif images are required.  Tif images that are not already 8-bit are converted to 8 bit.  
 
