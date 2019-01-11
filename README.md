@@ -2,7 +2,7 @@
 This repository contains iPython scripts for counting cells in up to two channels, as well as cell overlap across channels.  User-drawn regions of interest can also be specified.
 
 ## Included Files
-* **CellCounter.ipynb** is used to batch process a set of images.
+* **CellCounter.ipynb** is used to batch process a set of images.  Results of individual images can also be viewed.
 * **CellCounter_Optimization.ipynb** allows the user to choose thresholding parameters for cell counting that closely allign with a sample of user's own images that have been counted by hand.
 
 ## Package requirements
@@ -27,7 +27,7 @@ To subsequently activate this environment and open Jupyter Notebook enter the fo
 Single channel, 8-bit, .tif images are required.   
 
 ## Image J
-There are certain tasks relevant to the execution of these scripts (e.g. estimating cell diameter, drawing regions of interest) for which Image J is recommended.  Instructions regarding how to do these tasks in ImageJ are provided in scripts.
+There are certain tasks relevant to the execution of these scripts (e.g. estimating cell diameters, drawing regions of interest) for which Image J is recommended.  Instructions regarding how to do these tasks in ImageJ are provided in scripts.
 
 ## Running Code
 After downloading the ipynb files onto your local computer, from the terminal activate the necessary Conda environment and open Jupyter Notebook, then navigate to the files on your computer. The individual scripts contain more detailed instructions.
