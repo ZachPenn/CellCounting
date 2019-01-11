@@ -23,10 +23,11 @@ To subsequently activate this environment and open Jupyter Notebook enter the fo
 * source activate EnvironmentName
 * jupyter notebook
 
-From Jupyter Notebook navigate to ipynb files on your computer to run scipts.
-
 ## Image requirements
-Single channel, 8-bit, .tif images are required.  Tif images that are not already 8-bit are converted to 8 bit.  
+Single channel, 8-bit, .tif images are required.   
 
 ## Image J
 There are certain tasks relevant to the execution of these scripts (e.g. estimating cell diameter, drawing regions of interest) for which Image J is recommended.  Instructions regarding how to do these tasks in ImageJ are provided in scripts.
+
+## Running Code
+After downloading the ipynb files onto your local computer, from the terminal activate the necessary Conda environment and open Jupyter Notebook, then navigate to the files on your computer. The individual scripts contain more detailed instructions.
