@@ -1,5 +1,5 @@
 # CellCounting
-This repository contains iPython scripts for counting cells in up to two channels, as well as cell overlap across channels.  User-drawn regions of interest can also be specified.
+This repository contains iPython scripts for counting cells in up to two channels, as well as cell overlap across channels, in .tif images.  User-drawn regions of interest can also be specified.
 
 ## Included Files
 * **CellCounter.ipynb** is used to batch process a set of images.  Results of individual images can also be viewed.
