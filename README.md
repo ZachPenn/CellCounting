@@ -4,6 +4,7 @@ This repository contains iPython scripts for counting cells in up to two channel
 ## Included Files
 * **CellCounter.ipynb** is used to batch process a set of images.  Results of individual images can also be viewed.
 * **CellCounter_Optimization.ipynb** allows the user to choose thresholding parameters for cell counting that closely allign with a sample of user's own images that have been counted by hand.
+* **CellCounter_Optimization.ipynb** allows for average grayscale intensity to be measured.  ROI can also be specified.
 
 ## Package requirements
 The iPython scripts included in this repository require the following packages to be installed in your Conda environment:
