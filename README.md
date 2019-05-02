@@ -19,6 +19,7 @@ The iPython scripts included in this repository require the following packages t
 * matplotlib(2.2.2) 
 * holoviews
 * scipy
+* opencv
 
 The following commands can be executed in your terminal to create the environment: 
 * conda config --add channels conda-forge
