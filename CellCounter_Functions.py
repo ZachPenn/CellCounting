@@ -208,6 +208,8 @@ def optim_iterate(images,dirinfo,params):
          'Acc_HitsOverManualCounts': List_Acc_HitsOverManualCounts,
          'Acc_HitsOverAutoCounts': List_Acc_HitsOverAutoCounts,
          'Acc_HitsOverManualCounts': List_Acc_HitsOverManualCounts,
+         'Acc_Avg' : [(List_Acc_HitsOverAutoCounts[x]+List_Acc_HitsOverManualCounts[x])/2 
+                      for x in range(len(List_Acc_HitsOverAutoCounts))]
         }) 
     
     return DataFrame
