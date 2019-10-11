@@ -2,12 +2,13 @@ import pylab
 import os
 import sys
 import fnmatch
-import imread
 import cv2
 import numpy as np
 import mahotas as mh 
 import pandas as pd
 import holoviews as hv
+from holoviews import streams
+from holoviews.streams import Stream, param
 from contextlib import contextmanager
 hv.notebook_extension('bokeh')
 
@@ -39,35 +40,24 @@ def getdirinfo(dirinfo):
     dirinfo['output'] = os.path.join(os.path.normpath(dirinfo['main']), "SavedOutput")
 
     #Get filenames and create output subdirectories based upon usage
-    try:
-        os.mkdir(dirinfo['output'])
-    except FileExistsError:
-        pass
+    if not os.path.exists(dirinfo['output']): os.mkdir(dirinfo['output'])
     if os.path.isdir(dirinfo['ch1']):
         dirinfo['ch1_fnames'] = sorted(os.listdir(dirinfo['ch1']))
-        dirinfo['ch1_fnames'] = fnmatch.filter(dirinfo['ch1_fnames'], '*.tif') #restrict files to .tif images
+        dirinfo['ch1_fnames'] = fnmatch.filter(dirinfo['ch1_fnames'], '*.tif') 
         dirinfo['output_ch1'] = os.path.join(os.path.normpath(dirinfo['output']), "Ch1")
-        try:
-            os.mkdir( dirinfo['output_ch1'])
-        except FileExistsError: 
-            pass
+        if not os.path.isdir(dirinfo['output_ch1']): os.mkdir(dirinfo['output_ch1'])
     if os.path.isdir(dirinfo['ch2']):
         dirinfo['ch2_fnames'] = sorted(os.listdir(dirinfo['ch2']))
-        dirinfo['ch2_fnames'] = fnmatch.filter(dirinfo['ch2_fnames'], '*.tif') #restrict files to .tif images
+        dirinfo['ch2_fnames'] = fnmatch.filter(dirinfo['ch2_fnames'], '*.tif') 
         dirinfo['output_ch2'] = os.path.join(os.path.normpath(dirinfo['output']), "Ch2")
-        try:
-            os.mkdir( dirinfo['output_ch2'])
-        except FileExistsError: 
-            pass  
+        if not os.path.isdir(dirinfo['output_ch2']): os.mkdir(dirinfo['output_ch2'])
     if os.path.isdir(dirinfo['ROI']):
         dirinfo['roi_fnames'] = sorted(os.listdir(dirinfo['ROI']))
-        dirinfo['roi_fnames'] = fnmatch.filter(dirinfo['roi_fnames'], '*.tif') #restrict files to .tif images
+        dirinfo['roi_fnames'] = fnmatch.filter(dirinfo['roi_fnames'], '*.tif') 
     if os.path.isdir(dirinfo['ch1']) and os.path.isdir(dirinfo['ch2']):
         dirinfo['output_merge'] = os.path.join(os.path.normpath((dirinfo['output'])), "Merge")
-        try:
-            os.mkdir(dirinfo['output_merge']) 
-        except FileExistsError:
-            pass
+        if not os.path.isdir(dirinfo['output_merge']): os.mkdir(dirinfo['output_merge'])
+
     return dirinfo
 
 
@@ -77,21 +67,14 @@ def getdirinfo(dirinfo):
 
 def optim_getdirinfo(dirinfo):
     
-    #Define existing subdirectories
     dirinfo['composite'] = os.path.join(os.path.normpath(dirinfo['main']), "Composite")
     dirinfo['manual'] = os.path.join(os.path.normpath(dirinfo['main']), "ManualCounts")
     dirinfo['output'] = os.path.join(os.path.normpath(dirinfo['main']), "SavedOutput")
-    
-    #Get filenames and create output subdirectories based upon usage
-    try:
-        os.mkdir(dirinfo['output'])
-    except FileExistsError:
-        pass
-
+    if not os.path.isdir(dirinfo['output']): os.mkdir(dirinfo['output'])
     dirinfo['composite_fnames'] = sorted(os.listdir(dirinfo['composite']))
-    dirinfo['composite_fnames'] = fnmatch.filter(dirinfo['composite_fnames'], '*.tif') #restrict files in folder to .tif files
+    dirinfo['composite_fnames'] = fnmatch.filter(dirinfo['composite_fnames'], '*.tif') 
     dirinfo['manual_fnames'] = sorted(os.listdir(dirinfo['manual']))
-    dirinfo['manual_fnames'] = fnmatch.filter(dirinfo['manual_fnames'], '*.tif') #restrict files in folder to .tif files
+    dirinfo['manual_fnames'] = fnmatch.filter(dirinfo['manual_fnames'], '*.tif') 
 
     return dirinfo
 
@@ -100,46 +83,33 @@ def optim_getdirinfo(dirinfo):
 
 
 def optim_getimages(dirinfo,params):
-    images = {
-        'manual' : mh.imread(os.path.join(os.path.normpath(dirinfo['manual']), 
-                                         dirinfo['manual_fnames'][0]), as_grey=True),
-        'composite' : mh.imread(os.path.join(os.path.normpath(dirinfo['composite']), 
-                                     dirinfo['composite_fnames'][0]), as_grey=True)
-    }
-    images['bg'] = cv2.GaussianBlur(images['composite'].astype('float'),(0,0),params['diam']*3)
-    images['bg'] = images['composite'] - images['bg'] 
-    images['bg'][images['bg']<0] = 0
-    images['gauss'] = cv2.GaussianBlur(images['bg'],(0,0),params['diam']/12)
-    params['counts'] = (images['manual']>0).sum()
-    params['otsu'] = mh.otsu(images['gauss'].astype('uint8'))
-    params['thresh'] = params['otsu']
-    count_out = Count(0,"Optim",params,dirinfo,UseROI=False,UseWatershed=params['UseWatershed'])  
-    images['otsu'] = count_out['thresh']
-     
-    i_comp = hv.Image((np.arange(images['composite'].shape[1]), 
-                       np.arange(images['composite'].shape[0]), 
-                       images['composite'])).opts(
-               invert_yaxis=True,cmap='gray',toolbar='below',
-               title="Composite Image") 
-    i_gauss = hv.Image((np.arange(images['gauss'].shape[1]), 
-                        np.arange(images['gauss'].shape[0]), 
-                       images['gauss'])).opts(
-               invert_yaxis=True,cmap='gray',toolbar='below',
-               title="Preprocessed Image")   
-    i_otsu = hv.Image((np.arange(images['otsu'].shape[1]), 
-                       np.arange(images['otsu'].shape[0]), 
-                       images['otsu']*255)).opts(
-                invert_yaxis=True,cmap='gray',toolbar='below',
-                title="Otsu Thresholded Image")
-    i_cells = hv.Image((np.arange(count_out['cells'].shape[1]), 
-                       np.arange(count_out['cells'].shape[0]), 
-                       count_out['cells']*(255//count_out['cells'].max()))).opts(
-                invert_yaxis=True,cmap='jet',toolbar='below',
-                title="Cells Counted Using Otsu")   
     
+    images = {
+        'manual' : cv2.imread(os.path.join(os.path.normpath(dirinfo['manual']), dirinfo['manual_fnames'][0]), 
+                              cv2.IMREAD_GRAYSCALE),
+        'composite' : cv2.imread(os.path.join(os.path.normpath(dirinfo['composite']), dirinfo['composite_fnames'][0]),
+                                cv2.IMREAD_GRAYSCALE)
+    }
+       
+    images['median'] = medianFilter(images['composite'], ksize = params['diam']//2)
+    images['bg'] = subtractbg(images['median'], ksize = params['diam']*3)
+    images['gauss'] = cv2.GaussianBlur(images['bg'],(0,0),params['diam']/6)
+    params['counts'] = (images['manual']>0).sum()  
+    params['otsu'], _ = cv2.threshold(images['gauss'].astype('uint8'),0,255,
+                                      cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    params['thresh'] = params['otsu']
+    images['otsu'] = images['gauss'] > params['thresh']
+    count_out = Count(0,"Optim",params,dirinfo,UseROI=False,UseWatershed=params['UseWatershed'])  
+    
+    i_comp = mkimage(images['composite'], title="Composite Image") 
+    i_gauss = mkimage(images['gauss'], title="Preprocessed Image") 
+    i_otsu = mkimage(images['otsu']*255, title="Otsu Thresholded Image")
+    i_cells = mkimage(count_out['cells']*(255//count_out['cells'].max()), 
+                      title="Cells Counted Using Otsu").opts(cmap='jet')  
     display = i_comp + i_gauss + i_otsu + i_cells
 
     return images, params, display
+
 
 
 #############################################################################################################################
@@ -164,7 +134,6 @@ def optim_iterate(images,dirinfo,params):
 
     for thresh in List_ThreshValues:
 
-        #print("Counting Threshold " + str(thresh))
         params['thresh']=thresh  
         with suppress_stdout():
             count_out = Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=params['UseWatershed'])    
@@ -181,18 +150,15 @@ def optim_iterate(images,dirinfo,params):
         #Determine Number of Automatically Counted Cells Whose Location Corresponds to a Single Manually Counted Cell
         Hits = 0 
         if count_out['nr_nuclei'] > 0:
-            for cell in range (1,count_out['nr_nuclei']+1): #for each automatically counted cell
+            for cell in range (1,count_out['nr_nuclei']+1): 
                 HitMap = images['manual'][count_out['cells']==cell]
                 if HitMap.sum()==255:
                     Hits += 1
         List_Hits.append(Hits)
 
         #Calculate Accuracies
-        try:
-            List_Acc_HitsOverAutoCounts.append(Hits/count_out['nr_nuclei'])
-        except: #if divide by zero occurs, set value to nan
-            List_Acc_HitsOverAutoCounts.append(np.nan)
-
+        hoac = Hits/count_out['nr_nuclei'] if count_out['nr_nuclei'] > 0 else np.nan
+        List_Acc_HitsOverAutoCounts.append(hoac)
         List_Acc_HitsOverManualCounts.append(Hits/params['counts'])
 
     #Create Dataframe
@@ -211,8 +177,7 @@ def optim_iterate(images,dirinfo,params):
          'Acc_Avg' : [(List_Acc_HitsOverAutoCounts[x]+List_Acc_HitsOverManualCounts[x])/2 
                       for x in range(len(List_Acc_HitsOverAutoCounts))]
         }) 
-    
-    return DataFrame
+    return DataFrame, images['manual']
 
 #############################################################################################################################
 
@@ -238,30 +203,20 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False):
         FileNames_Current = dirinfo['composite_fnames']
  
     #Load file
-    Image_Current_File = os.path.join(os.path.normpath(Directory_Current), FileNames_Current[file]) #Set directory location
-    Image_Current_Gray = mh.imread(Image_Current_File,as_grey=True) #Load File as greyscale image
+    Image_Current_File = os.path.join(os.path.normpath(Directory_Current), FileNames_Current[file]) 
+    Image_Current_Gray = cv2.imread(Image_Current_File,cv2.IMREAD_GRAYSCALE) 
     print("Processing: " + FileNames_Current[file])
 
-    #Substract Background
-    Image_Current_BG = cv2.GaussianBlur(Image_Current_Gray.astype('float'),(0,0),CellDiam*3)
-    Image_Current_BG = Image_Current_Gray - Image_Current_BG #Subtract background from orginal image
-    Image_Current_BG[Image_Current_BG<0] = 0 #Set negative values = 0
-    #Apply Gaussian Filter to Image
+    #Process file
+    Image_Current_Median = medianFilter(Image_Current_Gray, ksize = CellDiam//2)
+    Image_Current_BG = subtractbg(Image_Current_Gray, ksize = CellDiam*3)
     Image_Current_Gaussian = cv2.GaussianBlur(Image_Current_BG.astype('float'),(0,0),CellDiam/6)
-    #Threshold image 
-    Image_Current_T = Image_Current_Gaussian > Thresh #Threshold image
-    #Erase any particles that are below the minimum particle size
-    labeled,nr_objects = mh.label(Image_Current_T) #label particles in Image_Current_T
-    sizes = mh.labeled.labeled_size(labeled) #get list of particle sizes in Image_Current_T
-    too_small = np.where(sizes < (CellDiam*CellDiam*params['particle_min'])) #get list of particle sizes that are too small
-    labeled = mh.labeled.remove_regions(labeled, too_small) #remove particle sizes that are too small 
-    Image_Current_T = labeled != 0 #reconstitute Image_Current_T with particles removed
-
-    #Get ROI and apply to thresholded image
+    Image_Current_T = rm_smallparts(Image_Current_Gaussian > Thresh, CellDiam, params['particle_min'])
+    
     if UseROI:
-        ROI_Current_File = os.path.join(os.path.normpath(dirinfo['ROI']), dirinfo['roi_fnames'][file]) #Set directory 
-        ROI_Current = mh.imread(ROI_Current_File,as_grey=True) #Load File
-        Image_Current_T[ROI_Current==0]=0 #Set values of thresholded image outside of ROI to 0
+        ROI_Current_File = os.path.join(os.path.normpath(dirinfo['ROI']), dirinfo['roi_fnames'][file]) 
+        ROI_Current = cv2.imread(ROI_Current_File,cv2.IMREAD_GRAYSCALE) 
+        Image_Current_T[ROI_Current==0]=0 
         roi_size = np.count_nonzero(ROI_Current)
     else:
         roi_size = Image_Current_Gray.size
@@ -304,17 +259,14 @@ def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False):
 
     #Loop through images and count cells
     for file in range (len(fnames)):
-        #call function to count cells
         count_out = Count(file,Channel,params,dirinfo,UseROI=UseROI,UseWatershed=UseWatershed)
-        #store summary data
         COUNTS.append(count_out['nr_nuclei'])
         ROI_SIZE.append(count_out['roi_size'])
-        #save image of cell locations
-        mh.imsave(
+        cv2.imwrite(
             filename = os.path.splitext(
-                os.path.join(os.path.normpath(output),fnames[file])
-            )[0] + '_Counts.tif',
-            array = count_out['cells'].astype(np.uint8)
+                os.path.join(os.path.normpath(output),
+                             fnames[file]))[0] + '_Counts.tif',
+            img = count_out['cells'].astype(np.uint8)
         )
 
     #Create DattaFrame
@@ -355,17 +307,12 @@ def watershed(Image_Current_T,CellDiam):
 
         #Create seeds/foreground for watershed
         #See https://docs.opencv.org/3.4/d3/db4/tutorial_py_watershed.html for tutorial that helps explain this
-        Regmax_bc = np.ones((CellDiam,CellDiam)) #Define structure element regional maximum function.  Currently uses diamater
-        Image_Current_Seeds = mh.locmax(Image_Current_Tdist,Bc=Regmax_bc) #Find local maxima of distance transform
-        Image_Current_Seeds[Image_Current_Tdist==0]=False #remove locmax corresponding to 0 values
+        Regmax_bc = np.ones((CellDiam,CellDiam)) 
+        Image_Current_Seeds = mh.locmax(Image_Current_Tdist,Bc=Regmax_bc) 
+        Image_Current_Seeds[Image_Current_Tdist==0]=False 
         Image_Current_Seeds = mh.dilate(Image_Current_Seeds,np.ones((3,3)))
-        #Image_Current_Seeds = mh.erode(Image_Current_Seeds,np.ones((3,3)))
         seeds,nr_nuclei = mh.label(Image_Current_Seeds,Bc=np.ones((3,3)))
-
-        #Define unknown region between sure foreground (the seeds) and sure background 
         Image_Current_Unknown = Image_Current_SureBackground.astype(int) - Image_Current_Seeds.astype(int)
-
-        #Modify seeds to differentiate between background and unknown regions
         seeds+=1
         seeds[Image_Current_Unknown==1]=0
 
@@ -386,16 +333,13 @@ def watershed(Image_Current_T,CellDiam):
 
 
 #Function to count merged cells
-def Merge(Cells_Ch1,Cells_Ch2,params): 
+def Merge(Cells_Ch1,Cells_Ch2,params):   
     
-    if params['ch1_diam'] < params['ch2_diam']:
-        SmallCellDiam = params['ch1_diam']
-    else:
-        SmallCellDiam = params['ch2_diam']
+    SmallCellDiam = params['ch1_diam'] if params['ch1_diam'] < params['ch2_diam'] else params['ch2_diam']
     size_req = SmallCellDiam*SmallCellDiam*params['overlap']
     merge = np.zeros(Cells_Ch1.shape)
-    nr_nuclei = 0
     
+    nr_nuclei = 0    
     for c1_cell in range(1,Cells_Ch1.max()+1):
         for c2_cell in range(1,Cells_Ch2.max()+1):
             overlap_area=sum(Cells_Ch2[Cells_Ch1==c1_cell]==c2_cell)
@@ -435,23 +379,24 @@ def Merge_folder(dirinfo,params):
             print('Different number of images detected for Ch1 and Ch2.  Aborting Count.')
 
         else:      
-            #Initialize arrays to store data in
+            
             COUNTS = []
-            #Loop through files to identify overlapping cells
+            cv2.imread(os.path.join(os.path.normpath(dirinfo['manual']), dirinfo['manual_fnames'][0]), 
+                              cv2.IMREAD_GRAYSCALE)       
             for file in range (len(dirinfo['output_ch1_fnames'])):
-                    
-                #Load Threshold Images of Cell Locations  
                 print('Processing: {x}'.format(x=dirinfo['ch1_fnames'][file])) 
-                Cells_Ch1 = mh.imread(os.path.join(os.path.normpath(dirinfo['output_ch1']), 
-                                                   dirinfo['output_ch1_fnames'][file]), as_grey=True)
-                Cells_Ch2 = mh.imread(os.path.join(os.path.normpath(dirinfo['output_ch2']), 
-                                                   dirinfo['output_ch2_fnames'][file]), as_grey=True)
+                Cells_Ch1 = cv2.imread(os.path.join(os.path.normpath(dirinfo['output_ch1']), 
+                                                    dirinfo['output_ch1_fnames'][file]), 
+                                       cv2.IMREAD_GRAYSCALE)
+                Cells_Ch2 = cv2.imread(os.path.join(os.path.normpath(dirinfo['output_c2']), 
+                                                    dirinfo['output_ch2_fnames'][file]), 
+                                       cv2.IMREAD_GRAYSCALE)              
                 merge_out = Merge(Cells_Ch1,Cells_Ch2,params)
                 COUNTS.append(merge_out['nr_nuclei'])    
-                mh.imsave(
+                cv2.imwrite(
                     filename = os.path.join(os.path.normpath(dirinfo['output_merge']), 
                                     dirinfo['output_ch1_fnames'][file] + "_merge.tif"),
-                    array = merge_out['cells'].astype(np.uint8)
+                    img = merge_out['cells'].astype(np.uint8)
                 )
 
             #Count summary that can be saved to disk
@@ -469,31 +414,85 @@ def Merge_folder(dirinfo,params):
             print('Ch2 must be counted before attempting to examine cell overlap')
 
 
+#############################################################################################################################
+
+
+def ROI_plot(directory,fnames,file,region_names=None):    
+    
+    #Get image
+    Image_Current_File = os.path.join(os.path.normpath(directory), fnames[file]) 
+    img = cv2.imread(Image_Current_File,cv2.IMREAD_GRAYSCALE) 
+    
+    #get number of objects to be drawn
+    nobjects = len(region_names) if region_names else 0 
+
+    #Make reference image the base image on which to draw
+    image_title = "No Regions to Draw" if nobjects == 0 else "Draw Regions: "+', '.join(region_names)
+    image = hv.Image((np.arange(img.shape[1]), np.arange(img.shape[0]), img))
+    image.opts(width=int(img.shape[1]),
+               height=int(img.shape[0]),
+              invert_yaxis=True,cmap='gray',
+              colorbar=True,
+               toolbar='below',
+              title=image_title)
+
+    #Create polygon element on which to draw and connect via stream to PolyDraw drawing tool
+    poly = hv.Polygons([])
+    poly_stream = streams.PolyDraw(source=poly, drag=True, num_objects=nobjects, show_vertices=True)
+    poly.opts(fill_alpha=0.3, active_tools=['poly_draw'])
+
+    def centers(data):
+        try:
+            x_ls, y_ls = data['xs'], data['ys']
+        except TypeError:
+            x_ls, y_ls = [], []
+        xs = [np.mean(x) for x in x_ls]
+        ys = [np.mean(y) for y in y_ls]
+        rois = region_names[:len(xs)]
+        return hv.Labels((xs, ys, rois))
+    
+    if nobjects > 0:
+        dmap = hv.DynamicMap(centers, streams=[poly_stream])
+        return (image * poly * dmap), poly_stream, img.shape
+    else:
+        return (image), None, img.shape
+
+    
+#############################################################################################################################
+
+    
+def ROI_mkMasks(directory,fnames,file,region_names,ROI_stream,img_shape):
+
+    ROI_masks = {}
+    for poly in range(len(ROI_stream.data['xs'])):
+        x = np.array(ROI_stream.data['xs'][poly]) #x coordinates
+        y = np.array(ROI_stream.data['ys'][poly]) #y coordinates
+        xy = np.column_stack((x,y)).astype('uint64') #xy coordinate pairs
+        mask = np.zeros(img_shape) # create empty mask
+        cv2.fillPoly(mask, pts =[xy], color=255) #fill polygon
+        ROI_masks[region_names[poly]] = mask #save to ROI masks as boolean 
+        
+        outname = "{cfile}_mask_{region}.tif".format(cfile=os.path.splitext(fnames[file])[0],
+                                                  region=region_names[poly])
+        
+        cv2.imwrite(
+            filename = os.path.join(os.path.normpath(directory), outname),
+            img = mask
+        )
+        
+    return ROI_masks
+
 
 #############################################################################################################################
 
 
 def display_count(count_out):  
-    i_gray = hv.Image((np.arange(count_out['image'].shape[1]), 
-                       np.arange(count_out['image'].shape[0]), 
-                       count_out['image'])).opts(
-               invert_yaxis=True,cmap='gray',toolbar='below',
-               title="Original Image")
-    i_gauss = hv.Image((np.arange(count_out['gauss'].shape[1]), 
-                        np.arange(count_out['gauss'].shape[0]), 
-                        count_out['gauss'])).opts(
-               invert_yaxis=True,cmap='gray',toolbar='below',
-               title="Preprocessed Image")
-    i_thresh = hv.Image((np.arange(count_out['thresh'].shape[1]), 
-                         np.arange(count_out['thresh'].shape[0]), 
-                         count_out['thresh']*255)).opts(
-               invert_yaxis=True,cmap='gray',toolbar='below',
-               title="Thresholded Image")
-    i_cells = hv.Image((np.arange(count_out['cells'].shape[1]), 
-                        np.arange(count_out['cells'].shape[0]), 
-                        count_out['cells']*(255//count_out['cells'].max()))).opts(
-               invert_yaxis=True,cmap='jet',toolbar='below',
-               title="Defined Cells")
+    
+    i_gray = mkimage(count_out['image'], title = "Original Image")
+    i_gauss = mkimage(count_out['gauss'], title = "Preprocessed Image")
+    i_thresh = mkimage(count_out['thresh']*255, title = "Thresholded Image")
+    i_cells = mkimage(count_out['cells']*(255//count_out['cells'].max()), 
+                      title = "Defined Cells").opts(cmap="jet")
     display = i_gray + i_gauss + i_thresh + i_cells
     return display
     
@@ -501,38 +500,63 @@ def display_count(count_out):
 #############################################################################################################################
 
 
-def display_merge(count_out1,count_out2,merge_out):  
-    i_gray1 = hv.Image((np.arange(count_out1['image'].shape[1]), 
-                       np.arange(count_out1['image'].shape[0]), 
-                       count_out1['image'])).opts(
-               invert_yaxis=True,cmap='gray',toolbar='below',
-               title="Ch1 Original Image")
+def display_merge(count_out1,count_out2,merge_out): 
     
-    i_gray2 = hv.Image((np.arange(count_out2['image'].shape[1]), 
-                       np.arange(count_out2['image'].shape[0]), 
-                       count_out2['image'])).opts(
-               invert_yaxis=True,cmap='gray',toolbar='below',
-               title="Ch2 Original Image")
-    
-    i_cells1 = hv.Image((np.arange(count_out1['cells'].shape[1]), 
-                        np.arange(count_out1['cells'].shape[0]), 
-                        count_out1['cells']*(255//count_out1['cells'].max()))).opts(
-               invert_yaxis=True,cmap='jet',toolbar='below',
-               title="Ch1 Defined Cells")
-    
-    i_cells2 = hv.Image((np.arange(count_out2['cells'].shape[1]), 
-                    np.arange(count_out2['cells'].shape[0]), 
-                    count_out2['cells']*(255//count_out2['cells'].max()))).opts(
-           invert_yaxis=True,cmap='jet',toolbar='below',
-           title="Ch2 Defined Cells")
-    i_merge = hv.Image((np.arange(merge_out['cells'].shape[1]), 
-                np.arange(merge_out['cells'].shape[0]), 
-                merge_out['cells']*(255//merge_out['cells'].max()))).opts(
-       invert_yaxis=True,cmap='jet',toolbar='below',
-       title="Overlapping Cells")  
+    i_gray1 = mkimage(count_out1['image'], title = "Ch1 Original Image")
+    i_gray2 = mkimage(count_out2['image'], title = "Ch2 Original Image") 
+    i_cells1 = mkimage(count_out1['cells']*(255//count_out1['cells'].max()),
+                       title = "Ch1 Defined Cells")
+    i_cells2 = mkimage(count_out1['cells']*(255//count_out1['cells'].max()),
+                       title = "Ch2 Defined Cells")
+    i_merge = mkimage(merge_out['cells']*(255//merge_out['cells'].max()),
+                     title = "Overlapping Cells")
     display = i_gray1 + i_gray2 + i_cells1 + i_cells2 + i_merge
     return display
+
+
+#############################################################################################################################
+
+
+def medianFilter(image, ksize):
     
+    ksize = (ksize-1) if (ksize%2 == 0) else ksize
+    image = cv2.medianBlur(image, ksize)
+    return image
     
+
+#############################################################################################################################
+
+
+def subtractbg(image, ksize):  
     
+    image = image.astype('float')
+    bg = cv2.GaussianBlur(image,
+                         (0,0),
+                         ksize)
+    new_image = image - bg
+    new_image[new_image<0] = 0
+    return new_image
+    
+
+#############################################################################################################################
+
+    
+def mkimage(image, title=""):
+    
+    image = hv.Image((np.arange(image.shape[1]), 
+                       np.arange(image.shape[0]), 
+                       image)).opts(
+               invert_yaxis=True,cmap='gray',toolbar='below',
+               title= title) 
+    return image
+    
+#############################################################################################################################
+    
+def rm_smallparts (image, celldiam, pmin):
+    labeled,nr_objects = mh.label(image)
+    sizes = mh.labeled.labeled_size(labeled)
+    too_small = np.where(sizes < (celldiam*celldiam*pmin))
+    labeled = mh.labeled.remove_regions(labeled, too_small)
+    Image_Current_T = labeled != 0
+    return Image_Current_T
     
