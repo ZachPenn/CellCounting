@@ -23,7 +23,7 @@ The iPython scripts included in this repository require the following packages t
 
 The following commands can be executed in your terminal to create the environment: 
 * conda config --add channels conda-forge
-* conda create -n CellCounter python=3.6.5 mahotas=1.4.4 pandas=0.23.0 matplotlib=2.2.2 jupyter imread holoviews scipy
+* conda create -n CellCounter python=3.6.5 mahotas=1.4.4 pandas=0.23.0 matplotlib=2.2.2 jupyter imread holoviews scipy opencv
 
 To subsequently activate this environment and open Jupyter Notebook enter the following commands in the terminal:
 * source activate CellCounter
