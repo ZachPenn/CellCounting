@@ -214,7 +214,7 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False):
     Image_Current_T = rm_smallparts(Image_Current_Gaussian > Thresh, CellDiam, params['particle_min'])
     
     if UseROI:
-        ROI_Current_File = os.path.join(os.path.normpath(dirinfo['ROI']), dirinfo['roi_fnames'][file]) 
+        ROI_Current_File = os.path.join(os.path.normpath(dirinfo['ROI']), dirinfo['roi_fnames'][file])
         ROI_Current = cv2.imread(ROI_Current_File,cv2.IMREAD_GRAYSCALE) 
         Image_Current_T[ROI_Current==0]=0 
         roi_size = np.count_nonzero(ROI_Current)
@@ -252,7 +252,8 @@ def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False):
         output = dirinfo['output_ch2']
         diam = params['ch2_diam']
         thresh = params['ch2_thresh']  
-    
+   
+
     #Initialize arrays to store data in
     COUNTS = []
     ROI_SIZE = []
@@ -270,17 +271,28 @@ def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False):
         )
 
     #Create DattaFrame
-    DataFrame = pd.DataFrame(
-    {'FileNames': fnames,
-     'Channel' : len(fnames)*[Channel],
-     'Thresh' : np.ones(len(fnames))*thresh,
-     'UseROI' : np.ones(len(fnames))*UseROI,
-     'AvgCellDiam' : np.ones(len(fnames))*diam,
-     'ParticleMin' : np.ones(len(fnames))*params['particle_min'],
-     'Ch1_Counts': COUNTS,
-     'Ch1_ROI_Size': ROI_SIZE
-    })
-    return DataFrame
+    if Channel == "Ch1":
+        DataFrame = pd.DataFrame(
+        {'Ch1_FileNames': fnames,
+         'Ch1_Thresh' : np.ones(len(fnames))*thresh,
+         'Ch1_UseROI' : np.ones(len(fnames))*UseROI,
+         'Ch1_AvgCellDiam' : np.ones(len(fnames))*diam,
+         'Ch1_ParticleMin' : np.ones(len(fnames))*params['particle_min'],
+         'Ch1_Counts': COUNTS,
+         'Ch1_ROIsize': ROI_SIZE
+        })
+        return DataFrame
+    if Channel == "Ch2":
+        DataFrame = pd.DataFrame(
+        {'Ch2_FileNames': fnames,
+         'Ch2_Thresh' : np.ones(len(fnames))*thresh,
+         'Ch2_UseROI' : np.ones(len(fnames))*UseROI,
+         'Ch2_AvgCellDiam' : np.ones(len(fnames))*diam,
+         'Ch2_ParticleMin' : np.ones(len(fnames))*params['particle_min'],
+         'Ch2_Counts': COUNTS,
+         'Ch2_ROIsize': ROI_SIZE
+        })
+        return DataFrame
 
 
 #############################################################################################################################    
@@ -365,7 +377,7 @@ def Merge_folder(dirinfo,params):
         #Get list of Files to operate on 
         dirinfo['output_ch1_fnames'] = sorted(os.listdir(dirinfo['output_ch1']))
         dirinfo['output_ch1_fnames'] = fnmatch.filter(dirinfo['output_ch1_fnames'], '*.tif')
-        dirinfo['output_ch2_fnames'] = sorted(os.listdir(dirinfo['output_ch1']))
+        dirinfo['output_ch2_fnames'] = sorted(os.listdir(dirinfo['output_ch2']))
         dirinfo['output_ch2_fnames'] = fnmatch.filter(dirinfo['output_ch2_fnames'], '*.tif')
 
         #Define smaller of two cells
@@ -380,15 +392,13 @@ def Merge_folder(dirinfo,params):
 
         else:      
             
-            COUNTS = []
-            cv2.imread(os.path.join(os.path.normpath(dirinfo['manual']), dirinfo['manual_fnames'][0]), 
-                              cv2.IMREAD_GRAYSCALE)       
+            COUNTS = []     
             for file in range (len(dirinfo['output_ch1_fnames'])):
                 print('Processing: {x}'.format(x=dirinfo['ch1_fnames'][file])) 
                 Cells_Ch1 = cv2.imread(os.path.join(os.path.normpath(dirinfo['output_ch1']), 
                                                     dirinfo['output_ch1_fnames'][file]), 
                                        cv2.IMREAD_GRAYSCALE)
-                Cells_Ch2 = cv2.imread(os.path.join(os.path.normpath(dirinfo['output_c2']), 
+                Cells_Ch2 = cv2.imread(os.path.join(os.path.normpath(dirinfo['output_ch2']), 
                                                     dirinfo['output_ch2_fnames'][file]), 
                                        cv2.IMREAD_GRAYSCALE)              
                 merge_out = Merge(Cells_Ch1,Cells_Ch2,params)
@@ -506,7 +516,7 @@ def display_merge(count_out1,count_out2,merge_out):
     i_gray2 = mkimage(count_out2['image'], title = "Ch2 Original Image") 
     i_cells1 = mkimage(count_out1['cells']*(255//count_out1['cells'].max()),
                        title = "Ch1 Defined Cells")
-    i_cells2 = mkimage(count_out1['cells']*(255//count_out1['cells'].max()),
+    i_cells2 = mkimage(count_out2['cells']*(255//count_out1['cells'].max()),
                        title = "Ch2 Defined Cells")
     i_merge = mkimage(merge_out['cells']*(255//merge_out['cells'].max()),
                      title = "Overlapping Cells")
