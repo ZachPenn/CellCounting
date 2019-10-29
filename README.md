@@ -4,6 +4,7 @@ This repository contains iPython scripts for counting cells in up to two channel
 ## Included Files
 * **CellCounter.ipynb** is used to batch process a set of images.  Results of individual images can also be viewed.
 * **CellCounter_Optimization.ipynb** allows the user to choose thresholding parameters for cell counting that closely allign with a sample of user's own images that have been counted by hand.
+* **ROIdrawer.ipynb** allows the user to draw regions of interest on an image and save 8bit masks, to be used with CellCounter.ipynb to restrict cell counts in an image to a particular region of interest.
 * **CellCounter_Functions.py** contains functions upon which ipynb files depend
 
 ![Example](Images/Example.png)
