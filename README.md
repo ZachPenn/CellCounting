@@ -1,5 +1,5 @@
 # CellCounting
-This repository contains iPython scripts for counting cells in up to two channels, as well as cell overlap across channels, in 8-.tif images.  User-drawn regions of interest can also be specified.
+This repository contains iPython scripts for counting cells in up to two channels, as well as cell overlap across channels, in tif images.  User-drawn regions of interest can also be specified.
 
 ## Included Files
 * **CellCounter.ipynb** is used to batch process a set of images.  Results of individual images can also be viewed.
@@ -10,30 +10,40 @@ This repository contains iPython scripts for counting cells in up to two channel
 
 ![Example](Images/Example.png)
 
-## Package requirements
-The iPython scripts included in this repository require the following packages to be installed in your Conda environment:
-* python (3.6.5)
-* jupyter
-* imread
+# Installation and Package Requirements
+The iPython scripts included in this repository require the following packages to be installed in your Conda environment.  Although the package versions used during development are listed it is likely that latest releases of all will be fine to use:
+* python (3.6.7)
+* jupyter (1.0.0)
+* numpy (1.15.2)
+* pandas (0.23.0)
+* matplotlib (3.1.1) 
+* opencv (3.4.3)
+* holoviews (1.12.3)
+* scipy (1.2.1)
 * mahotas(1.4.4)
-* numpy(1.14.3)
-* pandas(0.23.0)
-* matplotlib(2.2.2) 
-* holoviews
-* scipy
-* opencv
 
-The following commands can be executed in your terminal to create the environment: 
-* conda config --add channels conda-forge
-* conda create -n CellCounter python=3.6.5 mahotas=1.4.4 pandas=0.23.0 matplotlib=2.2.2 jupyter imread holoviews scipy opencv
+1. [Download and install Miniconda/Conda](https://conda.io/miniconda.html).  Download version with Python 3.7.  The ‘.pkg’ installer is likely easier for those unfamiliar with coding. See below for an explanation of Conda.
 
-To subsequently activate this environment and open Jupyter Notebook enter the following commands in the terminal:
-* source activate CellCounter
-* jupyter notebook
+2. Create the CellCounter Conda environment:
+
+    a. For OSX/Linux Users, open Terminal on your computer. If using Windows, open Anaconda Prompt.
+    
+    b. Copy the following command into Terminal/AnacondaPrompt: `conda create -y -n CellCounter -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.12.3 scipy=1.2.1 mahotas=1.4.4` and hit enter.
+        
+    c. The CellCounter Conda Environment is now installed.
+
+3. From the CellCounter github page, download all files onto your computer. On the main page of the repository, click the button to ‘Clone or download’, and download the zip folder onto your hard drive (don't forget to unzip the folder). The unzipped folder is called CellCounter-master and contains all files necessary to run the CellCounter.  Alternatively, use git commands if you are familiar with them (`git clone https://github.com/ZachPenn/CellCounting.git`)
+
+4. Activate the CellCounter Conda environment from Terminal/Anaconda Prompt.  On OSX/Linux, use your finder to open Terminal and enter the command: `source activate CellCounter`.  On a Windows os, search for 'Anaconda Prompt'.  Once open, enter the command `conda activate CellCounter`.  
+
+5. Launch Jupyter Notebook from Terminal/Anaconda Prompt (command: `jupyter notebook`). 
+
+**Note that steps 4-5 must be done fresh each time CellCounter is used on your computer.
 
 ## Image requirements
-Single channel, 8-bit, .tif images are required. 
-16 and 32 bit image processing will likely soon be added, but I'm lazy for now.  Let me know if you need this.
+Single channel, .tif images are required (8, 16, 32 and 64 bit images should now all work)
+
+If your images are RGB/BGR 3-channel images, you can use ImageSplitter.ipynb to separate them.
 
 ## Image J
 There are certain tasks relevant to the execution of these scripts (e.g. estimating cell diameters, drawing regions of interest) for which Image J is recommended.  Instructions regarding how to do these tasks in ImageJ are provided in the ipynb files..
