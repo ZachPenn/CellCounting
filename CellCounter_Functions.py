@@ -61,7 +61,6 @@ def getdirinfo(dirinfo):
     return dirinfo
 
 
-
 #############################################################################################################################
 
 
@@ -95,7 +94,7 @@ def optim_getimages(dirinfo,params):
     images['bg'] = subtractbg(images['median'], ksize = params['diam']*3)
     images['gauss'] = cv2.GaussianBlur(images['bg'],(0,0),params['diam']/6)
     params['counts'] = (images['manual']>0).sum()
-    params['otsu'], _ = cv2.threshold(images['gauss'].astype('uint8'),0,255,
+    params['otsu'], _ = cv2.threshold(images['gauss'].astype('uint64'),0,255,
                                       cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     params['thresh'] = params['otsu']
     images['otsu'] = images['gauss'] > params['thresh']
@@ -109,7 +108,6 @@ def optim_getimages(dirinfo,params):
     display = i_comp + i_gauss + i_otsu + i_cells
 
     return images, params, display
-
 
 
 #############################################################################################################################
@@ -179,6 +177,7 @@ def optim_iterate(images,dirinfo,params):
         })
     return DataFrame, images['manual']
 
+
 #############################################################################################################################
 
 
@@ -237,7 +236,9 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False):
     print('Cells: {x}'.format(x=count_output['nr_nuclei']))
     return count_output
 
+
 #############################################################################################################################
+
 
 def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False):
 
@@ -341,6 +342,7 @@ def watershed(Image_Current_T,CellDiam):
     #return Image_Current_Seeds, nr_nuclei
     return Image_Current_Cells,nr_nuclei
 
+
 #############################################################################################################################
 
 
@@ -432,10 +434,14 @@ def Merge_folder(dirinfo,params):
 def ROI_plot(directory,fnames,file,region_names=None):
 
     #Get image
-    Image_Current_File = os.path.join(os.path.normpath(directory), fnames[file])
-    img = cv2.imread(Image_Current_File,cv2.IMREAD_GRAYSCALE)
-    print(Image_Current_File)
-    print('file: {}'.format(file))
+    try:
+        Image_Current_File = os.path.join(os.path.normpath(directory), fnames[file])
+        img = cv2.imread(Image_Current_File,cv2.IMREAD_GRAYSCALE)
+        print(Image_Current_File)
+        print('file: {}'.format(file))
+    except IndexError:
+        print('Max file index exceeded. All images in folder drawn.')
+        return None,None,None
 
     #get number of objects to be drawn
     nobjects = len(region_names) if region_names else 0
@@ -567,7 +573,9 @@ def mkimage(image, title=""):
 
     return image
 
+
 #############################################################################################################################
+
 
 def rm_smallparts (image, celldiam, pmin):
     labeled,nr_objects = mh.label(image)
@@ -576,3 +584,28 @@ def rm_smallparts (image, celldiam, pmin):
     labeled = mh.labeled.remove_regions(labeled, too_small)
     Image_Current_T = labeled != 0
     return Image_Current_T
+
+
+#############################################################################################################################
+
+
+def split_channels(dirinfo):
+
+    dirinfo['fnames'] = sorted(os.listdir(dirinfo['main']))
+    dirinfo['fnames'] = fnmatch.filter(dirinfo['fnames'], 
+                                       '.'.join(['*',dirinfo['fext']]))
+
+    for channel in dirinfo['cnames']:
+        dirinfo[channel] = os.path.join(os.path.normpath(dirinfo['main']), channel)
+        if not os.path.exists(dirinfo[channel]): os.mkdir(dirinfo[channel])
+
+    for file in dirinfo['fnames']:
+        print(file)
+        image = cv2.imread(os.path.join(os.path.normpath(dirinfo['main']), file), cv2.IMREAD_COLOR)
+        depth = image.dtype
+        for index, channel in enumerate(dirinfo['cnames']): 
+            cv2.imwrite(
+                filename = os.path.join(
+                    os.path.normpath(dirinfo[channel]),
+                    '.'.join(['_'.join([file,channel]) , dirinfo['fext']])),
+                img = image[:,:,index].astype(depth))
