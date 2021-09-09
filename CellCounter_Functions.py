@@ -7,6 +7,7 @@ import numpy as np
 import mahotas as mh
 import pandas as pd
 import holoviews as hv
+from skimage import filters
 from holoviews import streams
 from holoviews.streams import Stream, param
 from contextlib import contextmanager
@@ -94,8 +95,9 @@ def optim_getimages(dirinfo,params):
     images['bg'] = subtractbg(images['median'], ksize = params['diam']*3)
     images['gauss'] = cv2.GaussianBlur(images['bg'],(0,0),params['diam']/6)
     params['counts'] = (images['manual']>0).sum()
-    params['otsu'], _ = cv2.threshold(images['gauss'].astype('uint64'),0,255,
-                                      cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    params['otsu'] = filters.threshold_otsu(image=images['gauss'].astype('int64'))
+    #cv2.threshold(images['gauss'].astype('uint64'),0,255,
+    #                                  cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     params['thresh'] = params['otsu']
     images['otsu'] = images['gauss'] > params['thresh']
     count_out = Count(0,"Optim",params,dirinfo,UseROI=False,UseWatershed=params['UseWatershed'])
