@@ -490,7 +490,7 @@ def ROI_mkMasks(directory,fnames,file,region_names,ROI_stream,img_shape):
         x = np.array(ROI_stream.data['xs'][poly]) #x coordinates
         y = np.array(ROI_stream.data['ys'][poly]) #y coordinates
         xy = np.column_stack((x,y)).astype('uint64') #xy coordinate pairs
-        mask = np.zeros(img_shape) # create empty mask
+        mask = np.zeros(img_shape).astype('uint8') # create empty mask
         cv2.fillPoly(mask, pts =[xy], color=255) #fill polygon
         ROI_masks[region_names[poly]] = mask #save to ROI masks as boolean
 
