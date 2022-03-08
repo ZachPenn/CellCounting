@@ -484,7 +484,15 @@ def ROI_plot(directory,fnames,file,region_names=None):
 
 
 def ROI_mkMasks(directory,fnames,file,region_names,ROI_stream,img_shape):
-
+    
+    directory_masks = os.path.join(directory, "masks")
+    if not os.path.isdir(directory_masks):
+        os.mkdir(directory_masks)
+    for region in region_names:
+        subdir = os.path.join(directory_masks, region)
+        if not os.path.isdir(subdir):
+            os.mkdir(subdir)
+    
     ROI_masks = {}
     for poly in range(len(ROI_stream.data['xs'])):
         x = np.array(ROI_stream.data['xs'][poly]) #x coordinates
@@ -498,7 +506,7 @@ def ROI_mkMasks(directory,fnames,file,region_names,ROI_stream,img_shape):
                                                   region=region_names[poly])
 
         cv2.imwrite(
-            filename = os.path.join(os.path.normpath(directory), outname),
+            filename = os.path.join(os.path.normpath(directory_masks), region_names[poly], outname),
             img = mask
         )
 
