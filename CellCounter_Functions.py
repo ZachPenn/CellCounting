@@ -433,7 +433,7 @@ def Merge_folder(dirinfo,params):
 #############################################################################################################################
 
 
-def ROI_plot(directory,fnames,file,region_names=None):
+def ROI_plot(directory,fnames,file,region_names=None, rng=(0,100)):
 
     #Get image
     try:
@@ -444,7 +444,13 @@ def ROI_plot(directory,fnames,file,region_names=None):
     except IndexError:
         print('Max file index exceeded. All images in folder drawn.')
         return None,None,None
-
+    
+    #set display range of image
+    rng_min = np.percentile(img, rng[0])
+    rng_max = np.percentile(img, rng[1])
+    img[img<rng_min]=rng_min
+    img[img>rng_max]=rng_max
+    
     #get number of objects to be drawn
     nobjects = len(region_names) if region_names else 0
 
