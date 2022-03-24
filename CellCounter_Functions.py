@@ -85,10 +85,14 @@ def optim_getdirinfo(dirinfo):
 def optim_getimages(dirinfo,params):
 
     images = {
-        'manual' : cv2.imread(os.path.join(os.path.normpath(dirinfo['manual']), dirinfo['manual_fnames'][0]),
-                              cv2.IMREAD_GRAYSCALE),
-        'composite' : cv2.imread(os.path.join(os.path.normpath(dirinfo['composite']), dirinfo['composite_fnames'][0]),
-                                cv2.IMREAD_GRAYSCALE)
+        'manual' : cv2.imread(
+            os.path.join(os.path.normpath(dirinfo['manual']), dirinfo['manual_fnames'][0]),
+            cv2.IMREAD_GRAYSCALE
+        ),
+        'composite' : cv2.imread(
+            os.path.join(os.path.normpath(dirinfo['composite']), dirinfo['composite_fnames'][0]),
+            cv2.IMREAD_GRAYSCALE
+        )
     }
 
     images['median'] = medianFilter(images['composite'], ksize = params['diam']//2)
@@ -100,15 +104,24 @@ def optim_getimages(dirinfo,params):
     #                                  cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     params['thresh'] = params['otsu']
     images['otsu'] = images['gauss'] > params['thresh']
-    count_out = Count(0,"Optim",params,dirinfo,UseROI=False,UseWatershed=params['UseWatershed'])
+    count_out = Count(
+        0,
+        "Optim",
+        params,
+        dirinfo,
+        UseROI=False,
+        UseWatershed=params['UseWatershed']
+    )
 
     i_comp = mkimage(images['composite'], title="Composite Image")
     i_gauss = mkimage(images['gauss'], title="Preprocessed Image")
     i_otsu = mkimage(images['otsu']*255, title="Otsu Thresholded Image")
-    i_cells = mkimage(count_out['cells']*(255//count_out['cells'].max()),
-                      title="Cells Counted Using Otsu").opts(cmap='jet')
+    i_cells = mkimage(
+        count_out['cells']*(255//count_out['cells'].max()),
+        title="Cells Counted Using Otsu"
+    ).opts(cmap='jet')
+    
     display = i_comp + i_gauss + i_otsu + i_cells
-
     return images, params, display
 
 
@@ -163,20 +176,24 @@ def optim_iterate(images,dirinfo,params):
 
     #Create Dataframe
     DataFrame = pd.DataFrame(
-        {'AutoCount_Thresh': List_ThreshValues,
-         'OTSU_Thresh': np.ones(len(List_ThreshValues))*params['otsu'],
-         'Manual_CellDiam': np.ones(len(List_ThreshValues))*params['diam'],
-         'Manual_Counts': np.ones(len(List_ThreshValues))*params['counts'],
-         'AutoCount_UseWatershed': np.ones(len(List_ThreshValues))*params['UseWatershed'],
-         'AutoCount_Counts': List_AutoCounts,
-         'AutoCount_Hits': List_Hits,
-         'AutoCount_AvgCellArea': List_CellAreas,
-         'Acc_HitsOverManualCounts': List_Acc_HitsOverManualCounts,
-         'Acc_HitsOverAutoCounts': List_Acc_HitsOverAutoCounts,
-         'Acc_HitsOverManualCounts': List_Acc_HitsOverManualCounts,
-         'Acc_Avg' : [(List_Acc_HitsOverAutoCounts[x]+List_Acc_HitsOverManualCounts[x])/2
-                      for x in range(len(List_Acc_HitsOverAutoCounts))]
-        })
+        {
+            'AutoCount_Thresh': List_ThreshValues,
+            'OTSU_Thresh': np.ones(len(List_ThreshValues))*params['otsu'],
+            'Manual_CellDiam': np.ones(len(List_ThreshValues))*params['diam'],
+            'Manual_Counts': np.ones(len(List_ThreshValues))*params['counts'],
+            'AutoCount_UseWatershed': np.ones(len(List_ThreshValues))*params['UseWatershed'],
+            'AutoCount_Counts': List_AutoCounts,
+            'AutoCount_Hits': List_Hits,
+            'AutoCount_AvgCellArea': List_CellAreas,
+            'Acc_HitsOverManualCounts': List_Acc_HitsOverManualCounts,
+            'Acc_HitsOverAutoCounts': List_Acc_HitsOverAutoCounts,
+            'Acc_HitsOverManualCounts': List_Acc_HitsOverManualCounts,
+            'Acc_Avg' : [
+                (List_Acc_HitsOverAutoCounts[x]+List_Acc_HitsOverManualCounts[x])/2
+                          for x in range(len(List_Acc_HitsOverAutoCounts))
+            ]
+        }
+    )
     return DataFrame, images['manual']
 
 
@@ -184,7 +201,7 @@ def optim_iterate(images,dirinfo,params):
 
 
 #Function to Count Cells
-def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False):
+def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False,SaveIntensities=False):
 
     #Set function parameters in accordance with channel to be counted
     if Channel == "Ch1":
@@ -192,11 +209,13 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False):
         Thresh = params['ch1_thresh']
         Directory_Current = dirinfo['ch1']
         FileNames_Current = dirinfo['ch1_fnames']
+        output = dirinfo['output_ch1']
     elif Channel == "Ch2":
         CellDiam = params['ch2_diam']
         Thresh = params['ch2_thresh']
         Directory_Current = dirinfo['ch2']
         FileNames_Current = dirinfo['ch2_fnames']
+        output = dirinfo['output_ch2']
     elif Channel == "Optim":
         CellDiam = params['diam']
         Thresh = params['thresh']
@@ -226,7 +245,29 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False):
         Image_Current_Cells, nr_nuclei = watershed(Image_Current_T,CellDiam)
     else:
         Image_Current_Cells, nr_nuclei = mh.label(Image_Current_T)
-
+        
+    if SaveIntensities:
+        cell_info = pd.DataFrame(columns=['{}_file'.format(Channel),'cell_id','cell_size','cell_intensity'])
+        for cell_id in np.unique(Image_Current_Cells[Image_Current_Cells>0]):
+            cell_info = cell_info.append(
+                {
+                    '{}_file'.format(Channel) : FileNames_Current[file],
+                    'cell_id' : cell_id,
+                    'cell_size' : len(Image_Current_Cells[Image_Current_Cells==cell_id]),
+                    'cell_intensity' : Image_Current_Gaussian[Image_Current_Cells==cell_id].mean()
+                },
+                ignore_index = True
+            )
+        cell_info.to_csv(
+            os.path.splitext(
+                os.path.join(
+                    os.path.normpath(output),
+                    FileNames_Current[file]
+                )
+            )[0] + '_CellInfo.csv', 
+            index=False
+        )
+            
     count_output = {
         'cells' : Image_Current_Cells,
         'nr_nuclei' : nr_nuclei,
@@ -242,7 +283,7 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False):
 #############################################################################################################################
 
 
-def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False):
+def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False,SaveIntensities=False):
 
     #Set some info in accordance with channel to be counted
     if Channel == "Ch1":
@@ -263,13 +304,24 @@ def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False):
 
     #Loop through images and count cells
     for file in range (len(fnames)):
-        count_out = Count(file,Channel,params,dirinfo,UseROI=UseROI,UseWatershed=UseWatershed)
+        count_out = Count(
+            file,
+            Channel,
+            params,
+            dirinfo,
+            UseROI=UseROI,
+            UseWatershed=UseWatershed,
+            SaveIntensities=SaveIntensities
+        )
         COUNTS.append(count_out['nr_nuclei'])
         ROI_SIZE.append(count_out['roi_size'])
         cv2.imwrite(
             filename = os.path.splitext(
-                os.path.join(os.path.normpath(output),
-                             fnames[file]))[0] + '_Counts.tif',
+                os.path.join(
+                    os.path.normpath(output),
+                    fnames[file]
+                )
+            )[0] + '_Counts.tif',
             img = count_out['cells'].astype(np.uint16)
         )
 
@@ -356,17 +408,23 @@ def Merge(Cells_Ch1,Cells_Ch2,params):
     merge = np.zeros(Cells_Ch1.shape)
 
     nr_nuclei = 0
+    merge_df = pd.DataFrame(columns=['Ch1_CellID','Ch2_CellID'])
     for c1_cell in range(1,Cells_Ch1.max()+1):
         for c2_cell in range(1,Cells_Ch2.max()+1):
             overlap_area=sum(Cells_Ch2[Cells_Ch1==c1_cell]==c2_cell)
             if overlap_area > size_req:
                 nr_nuclei+=1
+                merge_df = merge_df.append(
+                    {'Ch1_CellID' : c1_cell, 'Ch2_CellID' : c2_cell},
+                    ignore_index = True
+                )
                 merge[Cells_Ch1==c1_cell]=nr_nuclei
 
     print(nr_nuclei)
 
     merge_output = {
         'cells' : merge,
+        'cell_pairs' : merge_df,
         'nr_nuclei' : nr_nuclei,
     }
 
@@ -401,27 +459,50 @@ def Merge_folder(dirinfo,params):
             COUNTS = []
             for file in range (len(dirinfo['output_ch1_fnames'])):
                 print('Processing: {x}'.format(x=dirinfo['ch1_fnames'][file]))
-                Cells_Ch1 = cv2.imread(os.path.join(os.path.normpath(dirinfo['output_ch1']),
-                                                    dirinfo['output_ch1_fnames'][file]),
-                                       cv2.IMREAD_ANYDEPTH)
-                Cells_Ch2 = cv2.imread(os.path.join(os.path.normpath(dirinfo['output_ch2']),
-                                                    dirinfo['output_ch2_fnames'][file]),
-                                       cv2.IMREAD_ANYDEPTH)
-                merge_out = Merge(Cells_Ch1,Cells_Ch2,params)
-                COUNTS.append(merge_out['nr_nuclei'])
-                cv2.imwrite(
-                    filename = os.path.join(os.path.normpath(dirinfo['output_merge']),
-                                    dirinfo['output_ch1_fnames'][file] + "_merge.tif"),
-                    img = merge_out['cells'].astype(np.uint16)
+                Cells_Ch1 = cv2.imread(
+                    os.path.join(
+                        os.path.normpath(dirinfo['output_ch1']),
+                        dirinfo['output_ch1_fnames'][file]),
+                    cv2.IMREAD_ANYDEPTH
                 )
+                Cells_Ch2 = cv2.imread(
+                    os.path.join(
+                        os.path.normpath(dirinfo['output_ch2']),
+                        dirinfo['output_ch2_fnames'][file]),
+                    cv2.IMREAD_ANYDEPTH
+                )
+                merge_out = Merge(Cells_Ch1,Cells_Ch2,params)
+                
+                COUNTS.append(merge_out['nr_nuclei'])
+                
+                merge_out['cell_pairs'].insert(loc=0, column='Ch2_file',value=dirinfo['ch2_fnames'][file])
+                merge_out['cell_pairs'].insert(loc=0, column='Ch1_file',value=dirinfo['ch1_fnames'][file])
+                merge_out['cell_pairs'].to_csv(
+                    os.path.join(
+                        os.path.normpath(dirinfo['output_merge']),
+                        "_".join([
+                            dirinfo['ch1_fnames'][file].split('.')[0],
+                            dirinfo['ch2_fnames'][file].split('.')[0],
+                            "merge.csv"
+                        ])
+                    ),
+                    index = False
+                )
+                
+                #cv2.imwrite(
+                #    filename = os.path.join(os.path.normpath(dirinfo['output_merge']),
+                #                    dirinfo['output_ch1_fnames'][file] + "_merge.tif"),
+                #    img = merge_out['cells'].astype(np.uint16)
+                #)
+               
 
             #Count summary that can be saved to disk
             DataFrame = pd.DataFrame(
-                {'FileNames_Ch1': dirinfo['output_ch1_fnames'],
-                 'FileNames_Ch2': dirinfo['output_ch2_fnames'],
+                {'Ch1_file': dirinfo['ch1_fnames'],
+                 'Ch2_file': dirinfo['ch2_fnames'],
                  'Merge_Counts': COUNTS
                 })
-            return DataFrame,Cells_Ch1
+            return DataFrame
 
     else:
         if len(os.listdir(dirinfo['output_ch1']))==0:
@@ -625,3 +706,45 @@ def split_channels(dirinfo):
                     os.path.normpath(dirinfo[channel]),
                     '.'.join(['_'.join([file,channel]) , dirinfo['fext']])),
                 img = image[:,:,index].astype(depth))
+            
+
+#############################################################################################################################
+
+
+def extract_cellinfo(dirinfo):
+
+    extract_dictionary = {
+        'directories' : [
+            dirinfo['output_ch1'],
+            dirinfo['output_ch2'], 
+            dirinfo['output_merge']
+        ],
+        'output' : [
+            'Ch1_CellInfo.csv', 
+            'Ch2_CellInfo.csv', 
+            'Merge_CellInfo.csv'
+        ]
+    }
+
+    for directory, outputfile in zip(extract_dictionary['directories'],extract_dictionary['output']):
+
+        files = fnmatch.filter(
+            sorted(os.listdir(os.path.normpath(directory))), 
+            '*.csv'
+        )
+
+        if len(files) > 0:
+            frm_started = False
+            for file in files:
+                data = pd.read_csv(
+                        os.path.join(
+                            os.path.normpath(directory),
+                            file
+                        )
+                )
+                if frm_started:
+                    alldata = pd.concat([alldata, data])
+                else:
+                    alldata = data
+                    frm_started = True
+            alldata.to_csv(os.path.join(dirinfo['output'], outputfile))
