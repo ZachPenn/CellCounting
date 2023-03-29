@@ -114,13 +114,13 @@ def optim_getimages(dirinfo,params):
         UseWatershed=params['UseWatershed']
     )
 
-    i_comp = mkimage(images['composite'], title="Composite Image").opts( tools=['hover'])
-    i_gauss = mkimage(images['gauss'], title="Preprocessed Image").opts( tools=['hover'])
-    i_otsu = mkimage(images['otsu']*255, title="Otsu Thresholded Image").opts( tools=['hover'])
+    i_comp = mkimage(images['composite'], title="Composite Image")
+    i_gauss = mkimage(images['gauss'], title="Preprocessed Image")
+    i_otsu = mkimage(images['otsu'], title="Otsu Thresholded Image")
     i_cells = mkimage(
         count_out['cells']*(255//count_out['cells'].max()),
         title="Cells Counted Using Otsu"
-    ).opts(cmap='jet', tools=['hover'])
+    ).opts(cmap='jet')
     
     display = i_comp + i_gauss + i_otsu + i_cells
     return images, params, display
@@ -663,11 +663,17 @@ def subtractbg(image, ksize):
 
 def mkimage(image, title=""):
 
-    image = hv.Image((np.arange(image.shape[1]),
-                   np.arange(image.shape[0]),
-                   image)).opts(
-           invert_yaxis=True,cmap='gray',toolbar='below',
-           title= title)
+    image = hv.Image(
+        (np.arange(image.shape[1]), np.arange(image.shape[0]),
+         image)
+    ).opts(
+        invert_yaxis = True, 
+        cmap = 'gray',
+        toolbar = 'below',
+        clim = (0, image.max()),
+        title = title,
+        tools = ['hover']
+    )
 
     return image
 
