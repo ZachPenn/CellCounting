@@ -248,7 +248,7 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False,SaveIntens
     if UseWatershed == True:
         Image_Current_Cells, nr_nuclei = watershed(Image_Current_T,CellDiam)
     else:
-        Image_Current_Cells, nr_nuclei = mh.label(Image_Current_T)
+        Image_Current_Cells, nr_nuclei = sp.ndimage.label(Image_Current_T)
         
     if SaveIntensities:
         cell_info = pd.DataFrame(columns=['{}_file'.format(Channel),'cell_id','cell_size','cell_intensity'])
