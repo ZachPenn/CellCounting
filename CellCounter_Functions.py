@@ -118,7 +118,7 @@ def optim_getimages(dirinfo,params):
     i_gauss = mkimage(images['gauss'], title="Preprocessed Image")
     i_otsu = mkimage(images['otsu'], title="Otsu Thresholded Image")
     i_cells = mkimage(
-        count_out['cells']*(255//count_out['cells'].max()),
+        count_out['cells'],
         title="Cells Counted Using Otsu"
     ).opts(cmap='jet')
     
