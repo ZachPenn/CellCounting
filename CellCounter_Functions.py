@@ -9,11 +9,14 @@ import pandas as pd
 import holoviews as hv
 import scipy as sp
 from skimage import filters
+from skimage.segmentation import watershed as skwatershed
+from skimage.feature import peak_local_max
 from holoviews import streams
 from holoviews.streams import Stream, param
 from contextlib import contextmanager
+import warnings
 hv.notebook_extension('bokeh')
-
+warnings.filterwarnings("ignore")
 
 
 #############################################################################################################################
@@ -354,7 +357,34 @@ def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False,SaveInte
 #############################################################################################################################
 
 
-def watershed(Image_Current_T,CellDiam):
+def watershed(Image_Current_T, CellDiam):
+    
+    if Image_Current_T.max() == True:
+
+        Image_Current_Tdist = sp.ndimage.distance_transform_edt(Image_Current_T)
+        
+        coords = peak_local_max(
+            Image_Current_Tdist, 
+            footprint = np.ones((CellDiam,CellDiam)), 
+            labels = Image_Current_T
+        )
+        Image_Current_Seeds = np.zeros(Image_Current_T.shape, dtype=bool)
+        Image_Current_Seeds[tuple(coords.T)] = True
+        Image_Current_Seeds, nseeds = sp.ndimage.label(Image_Current_Seeds)
+        
+        labels = skwatershed(-Image_Current_Tdist, Image_Current_Seeds, mask=Image_Current_T)
+    
+    elif Image_Current_T.max() == False:
+        labels = Image_Current_T.astype(int)
+        nseeds = 0
+    
+    return labels, nseeds
+
+
+#############################################################################################################################
+
+
+def watershed_old(Image_Current_T,CellDiam):
 
     #If there are pixels above the threshold proceed to watershed
     if Image_Current_T.max() == True:
