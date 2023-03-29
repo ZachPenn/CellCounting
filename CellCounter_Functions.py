@@ -7,6 +7,7 @@ import numpy as np
 import mahotas as mh
 import pandas as pd
 import holoviews as hv
+import scipy as sp
 from skimage import filters
 from holoviews import streams
 from holoviews.streams import Stream, param
@@ -87,22 +88,22 @@ def optim_getimages(dirinfo,params):
     images = {
         'manual' : cv2.imread(
             os.path.join(os.path.normpath(dirinfo['manual']), dirinfo['manual_fnames'][0]),
-            cv2.IMREAD_GRAYSCALE
+            cv2.IMREAD_ANYDEPTH
         ),
         'composite' : cv2.imread(
             os.path.join(os.path.normpath(dirinfo['composite']), dirinfo['composite_fnames'][0]),
-            cv2.IMREAD_GRAYSCALE
+            cv2.IMREAD_ANYDEPTH
         )
     }
-
+    
     images['median'] = medianFilter(images['composite'], ksize = params['diam']//2)
     images['bg'] = subtractbg(images['median'], ksize = params['diam']*3)
     images['gauss'] = cv2.GaussianBlur(images['bg'],(0,0),params['diam']/6)
+    
     params['counts'] = (images['manual']>0).sum()
     params['otsu'] = filters.threshold_otsu(image=images['gauss'].astype('int64'))
-    #cv2.threshold(images['gauss'].astype('uint64'),0,255,
-    #                                  cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     params['thresh'] = params['otsu']
+    
     images['otsu'] = images['gauss'] > params['thresh']
     count_out = Count(
         0,
@@ -113,13 +114,13 @@ def optim_getimages(dirinfo,params):
         UseWatershed=params['UseWatershed']
     )
 
-    i_comp = mkimage(images['composite'], title="Composite Image")
-    i_gauss = mkimage(images['gauss'], title="Preprocessed Image")
-    i_otsu = mkimage(images['otsu']*255, title="Otsu Thresholded Image")
+    i_comp = mkimage(images['composite'], title="Composite Image").opts( tools=['hover'])
+    i_gauss = mkimage(images['gauss'], title="Preprocessed Image").opts( tools=['hover'])
+    i_otsu = mkimage(images['otsu']*255, title="Otsu Thresholded Image").opts( tools=['hover'])
     i_cells = mkimage(
         count_out['cells']*(255//count_out['cells'].max()),
         title="Cells Counted Using Otsu"
-    ).opts(cmap='jet')
+    ).opts(cmap='jet', tools=['hover'])
     
     display = i_comp + i_gauss + i_otsu + i_cells
     return images, params, display
@@ -224,7 +225,7 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False,SaveIntens
 
     #Load file
     Image_Current_File = os.path.join(os.path.normpath(Directory_Current), FileNames_Current[file])
-    Image_Current_Gray = cv2.imread(Image_Current_File,cv2.IMREAD_GRAYSCALE)
+    Image_Current_Gray = cv2.imread(Image_Current_File,cv2.IMREAD_ANYDEPTH)
     print("Processing: " + FileNames_Current[file])
 
     #Process file
@@ -235,7 +236,7 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False,SaveIntens
 
     if UseROI:
         ROI_Current_File = os.path.join(os.path.normpath(dirinfo['ROI']), dirinfo['roi_fnames'][file])
-        ROI_Current = cv2.imread(ROI_Current_File,cv2.IMREAD_GRAYSCALE)
+        ROI_Current = cv2.imread(ROI_Current_File,cv2.IMREAD_ANYDEPTH)
         Image_Current_T[ROI_Current==0]=0
         roi_size = np.count_nonzero(ROI_Current)
     else:
@@ -519,7 +520,7 @@ def ROI_plot(directory,fnames,file,region_names=None, rng=(0,100)):
     #Get image
     try:
         Image_Current_File = os.path.join(os.path.normpath(directory), fnames[file])
-        img = cv2.imread(Image_Current_File,cv2.IMREAD_GRAYSCALE)
+        img = cv2.imread(Image_Current_File,cv2.IMREAD_ANYDEPTH)
         print(Image_Current_File)
         print('file: {}'.format(file))
     except IndexError:
@@ -637,9 +638,9 @@ def display_merge(count_out1,count_out2,merge_out):
 
 
 def medianFilter(image, ksize):
-
+        
     ksize = (ksize-1) if (ksize%2 == 0) else ksize
-    image = cv2.medianBlur(image, ksize)
+    image = sp.ndimage.median_filter(image, size=ksize)
     return image
 
 
@@ -747,4 +748,4 @@ def extract_cellinfo(dirinfo):
                 else:
                     alldata = data
                     frm_started = True
-            alldata.to_csv(os.path.join(dirinfo['output'], outputfile))
+            alldata.to_csv(os.path.join(dirinfo['output'], outputfile), index = False)
