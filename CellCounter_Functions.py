@@ -14,6 +14,7 @@ from skimage.feature import peak_local_max
 from holoviews import streams
 from holoviews.streams import Stream, param
 from contextlib import contextmanager
+from tqdm import tqdm
 import warnings
 hv.notebook_extension('bokeh')
 warnings.filterwarnings("ignore")
@@ -132,7 +133,7 @@ def optim_getimages(dirinfo,params):
 #############################################################################################################################
 
 
-def optim_iterate(images,dirinfo,params):
+def optim_iterate(images, dirinfo, params, interv=1):
 
     Channel = 'Optim'
     file = 0 #Should always be zero because only one composite image
@@ -145,11 +146,11 @@ def optim_iterate(images,dirinfo,params):
     List_Acc_HitsOverManualCounts = []
 
     #Define maximum threshold value and create series of thresholds to cycle through
-    TMin = 0#params['otsu']
+    TMin = 0 #params['otsu']
     TMax = int(images['gauss'].max()//1) #Get maximum value in array.  Threshold can't go beyond this
-    List_ThreshValues = list(range(TMin,TMax))
+    List_ThreshValues = list(np.arange(TMin,TMax,interv))
 
-    for thresh in List_ThreshValues:
+    for thresh in tqdm(List_ThreshValues):
 
         params['thresh']=thresh
         with suppress_stdout():
@@ -365,7 +366,8 @@ def watershed(Image_Current_T, CellDiam):
         
         coords = peak_local_max(
             Image_Current_Tdist, 
-            footprint = np.ones((CellDiam,CellDiam)), 
+            footprint = np.ones((CellDiam,CellDiam)),
+            min_distance = int(CellDiam*.5),
             labels = Image_Current_T
         )
         Image_Current_Seeds = np.zeros(Image_Current_T.shape, dtype=bool)
