@@ -11,6 +11,7 @@ import scipy as sp
 from skimage import filters
 from skimage.segmentation import watershed as skwatershed
 from skimage.feature import peak_local_max
+from skimage import measure
 from holoviews import streams
 from holoviews.streams import Stream, param
 from contextlib import contextmanager
@@ -247,7 +248,7 @@ def Count(file,Channel,params,dirinfo,UseROI=False,UseWatershed=False,SaveIntens
         roi_size = Image_Current_Gray.size
 
     if UseWatershed == True:
-        Image_Current_Cells, nr_nuclei = watershed(Image_Current_T,CellDiam)
+        Image_Current_Cells, nr_nuclei = watershed(Image_Current_T, CellDiam, params['particle_min'])
     else:
         Image_Current_Cells, nr_nuclei = sp.ndimage.label(Image_Current_T)
         
@@ -358,17 +359,19 @@ def Count_folder(dirinfo,params,Channel,UseROI=False,UseWatershed=False,SaveInte
 #############################################################################################################################
 
 
-def watershed(Image_Current_T, CellDiam):
+def watershed(Image_Current_T, CellDiam, particle_min):
     
     if Image_Current_T.max() == True:
 
         Image_Current_Tdist = sp.ndimage.distance_transform_edt(Image_Current_T)
+        Image_Current_Tdist_erd = Image_Current_Tdist > CellDiam*particle_min
+        Image_Current_Tdist_lbls = measure.label(Image_Current_Tdist_erd)
         
         coords = peak_local_max(
             Image_Current_Tdist, 
-            footprint = np.ones((CellDiam,CellDiam)),
-            min_distance = int(CellDiam*.5),
-            labels = Image_Current_T
+            min_distance = int(CellDiam),
+            labels = Image_Current_Tdist_lbls,
+            num_peaks_per_label = 1
         )
         Image_Current_Seeds = np.zeros(Image_Current_T.shape, dtype=bool)
         Image_Current_Seeds[tuple(coords.T)] = True
